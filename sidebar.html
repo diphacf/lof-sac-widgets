@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOF Sidebar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── URL PARAMS (xem cuối file để đọc/cập nhật) ────────────────────
+   Ví dụ URL đầy đủ:
+   sidebar.html
+     ?month=Nov+2025
+     &m_act=464432  &m_tgt=662248  &m_ly=510365
+     &m_ach=70.1    &m_vly=-8.9
+     &m_stk=242640  &m_days=11.9
+     &y_act=7037505 &y_tgt=7459041 &y_ly=6771038
+     &y_ach=94.3    &y_vly=3.9
+     &si=464432     &so=440,180
+     &gap_m=+24252  &gap_y=+185430
+     &fr_dem=520000 &fr_fil=474400 &fr_rej=45600 &fr_pct=91.2
+     &fr_ret=8200   &fr_rcl=2850   &fr_smp=1400
+     &ch_dom=409763 &ch_exp=54669
+     &pr_kun=420950 &pr_lof=42740  &pr_oth=1329
+──────────────────────────────────────────────────────────────────── */
+
+:root {
+  --act:#0F59BA; --tgt:#99BFE9; --ly:#9C9CA4;
+  --dark:#012F63; --mid:#667085; --light:#9C9CA4;
+  --border:#D5DADD; --bg:#F5F6F7; --white:#FFFFFF;
+  --up:#4A984D; --up-bg:rgba(74,152,77,.12);
+  --dn:#CE4543; --dn-bg:rgba(206,69,67,.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow-y:auto;overflow-x:hidden;}
+body{
+  width:200px;
+  font-family:'Segoe UI',Arial,sans-serif;
+  font-size:11px;
+  background:var(--white);
+  color:var(--dark);
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+/* ── KPI Card ── */
+.kpi-card{border-radius:6px;border:1px solid var(--border);border-left:3px solid var(--act);padding:8px 10px;}
+.kpi-card h4{font-size:11px;font-weight:800;color:var(--act);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.kr{display:flex;align-items:center;gap:3px;margin-bottom:2px;}
+.kr-lbl{font-size:10px;color:var(--mid);font-weight:600;min-width:62px;}
+.kr-bw{flex:1;height:6px;background:#EAECEE;border-radius:3px;overflow:hidden;}
+.kr-b{height:100%;border-radius:3px;}
+.kr-val{font-size:10px;font-weight:800;color:var(--dark);min-width:50px;text-align:right;}
+.badges{display:flex;gap:4px;margin-top:5px;}
+.badge{flex:1;display:flex;flex-direction:column;align-items:center;padding:3px 4px;border-radius:4px;background:#EAECEE;}
+.badge .bv{font-size:11px;font-weight:900;line-height:1;}
+.badge .bl{font-size:9px;color:var(--mid);margin-top:1px;text-align:center;}
+.badge.up{background:var(--up-bg);} .badge.up .bv{color:var(--up);}
+.badge.dn{background:var(--dn-bg);} .badge.dn .bv{color:var(--dn);}
+.srow{display:flex;gap:4px;margin-top:5px;padding-top:5px;border-top:1px solid var(--border);}
+.st{flex:1;background:var(--bg);border-radius:4px;padding:3px 5px;}
+.st .sl{font-size:9px;color:var(--mid);}
+.st .sv{font-size:11px;font-weight:900;color:var(--dark);}
+
+/* ── Gap Card ── */
+.gap-card{border-radius:6px;border:1px solid var(--border);border-left:3px solid var(--tgt);padding:7px 10px;}
+.gap-card h4{font-size:11px;font-weight:800;color:var(--act);text-transform:uppercase;margin-bottom:4px;}
+.gkv{display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;}
+.gkv .gl{color:var(--mid);}
+.gkv .gv{font-weight:800;}
+.gdiff{display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);}
+.gdiff .dl{font-size:9px;color:var(--mid);}
+.gdiff .dv{font-size:11px;font-weight:900;}
+.dv.pos{color:var(--up);} .dv.neg{color:var(--dn);}
+
+/* ── Fill Rate Card ── */
+.fill-card{border-radius:6px;border:1px solid var(--border);border-left:3px solid var(--dark);padding:7px 10px;}
+.fill-card h4{font-size:11px;font-weight:800;color:var(--dark);text-transform:uppercase;margin-bottom:4px;}
+.fkv{display:flex;justify-content:space-between;margin-bottom:2px;}
+.fkv .fl2{font-size:10px;color:var(--mid);}
+.fkv .fv{font-size:10px;font-weight:800;}
+.fkv .fv.neg{color:var(--dn);}
+.fbw{height:6px;background:#EAECEE;border-radius:3px;overflow:hidden;margin-top:3px;}
+.fb{height:100%;border-radius:3px;background:var(--dark);}
+.fpct{text-align:right;font-size:10px;font-weight:900;color:var(--dark);}
+.rets{display:flex;gap:4px;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);}
+.ret{flex:1;background:var(--bg);border-radius:4px;padding:3px;text-align:center;}
+.ret .rl{font-size:8px;color:var(--mid);}
+.ret .rv{font-size:10px;font-weight:900;}
+
+/* ── Donut Card ── */
+.donut-card{border-radius:6px;border:1px solid var(--border);padding:6px 8px;background:var(--bg);}
+.donut-card h4{font-size:10px;font-weight:800;color:var(--mid);text-transform:uppercase;margin-bottom:4px;text-align:center;}
+.dw{display:flex;align-items:center;gap:6px;}
+.dl-list{display:flex;flex-direction:column;gap:3px;font-size:10px;flex:1;min-width:0;}
+.dl-i{display:flex;align-items:flex-start;gap:4px;}
+.dl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+.dl-lbl{color:var(--mid);font-size:9px;}
+.dl-val{font-weight:800;color:var(--dark);font-size:10px;}
+</style>
+</head>
+<body>
+
+<!-- KPI Tháng -->
+<div class="kpi-card" id="kpiMonth">
+  <h4 id="kpiMonthTitle">📅 Tháng — Nov 2025</h4>
+  <div class="kr">
+    <div class="kr-lbl">Thực tế</div>
+    <div class="kr-bw"><div class="kr-b" id="barMAct" style="background:var(--act)"></div></div>
+    <div class="kr-val" id="valMAct"></div>
+  </div>
+  <div class="kr">
+    <div class="kr-lbl">Mục tiêu</div>
+    <div class="kr-bw"><div class="kr-b" id="barMTgt" style="background:var(--tgt)"></div></div>
+    <div class="kr-val" id="valMTgt"></div>
+  </div>
+  <div class="kr">
+    <div class="kr-lbl">Năm trước</div>
+    <div class="kr-bw"><div class="kr-b" id="barMLY" style="background:var(--ly)"></div></div>
+    <div class="kr-val" id="valMLY"></div>
+  </div>
+  <div class="badges">
+    <div class="badge" id="badgeMAch"><div class="bv" id="badgeMAchV"></div><div class="bl">% Đạt</div></div>
+    <div class="badge" id="badgeMVly"><div class="bv" id="badgeMVlyV"></div><div class="bl">vs Năm trước</div></div>
+  </div>
+  <div class="srow">
+    <div class="st"><div class="sl">Tổng tồn kho</div><div class="sv" id="valStk"></div></div>
+    <div class="st"><div class="sl">Ngày tồn kho</div><div class="sv" id="valDays"></div></div>
+  </div>
+</div>
+
+<!-- KPI Lũy kế -->
+<div class="kpi-card">
+  <h4 id="kpiYTDTitle">📊 Lũy kế — T1–T11/2025</h4>
+  <div class="kr">
+    <div class="kr-lbl">Thực tế</div>
+    <div class="kr-bw"><div class="kr-b" id="barYAct" style="background:var(--act)"></div></div>
+    <div class="kr-val" id="valYAct"></div>
+  </div>
+  <div class="kr">
+    <div class="kr-lbl">Mục tiêu</div>
+    <div class="kr-bw"><div class="kr-b" id="barYTgt" style="background:var(--tgt)"></div></div>
+    <div class="kr-val" id="valYTgt"></div>
+  </div>
+  <div class="kr">
+    <div class="kr-lbl">Năm trước</div>
+    <div class="kr-bw"><div class="kr-b" id="barYLY" style="background:var(--ly)"></div></div>
+    <div class="kr-val" id="valYLY"></div>
+  </div>
+  <div class="badges">
+    <div class="badge" id="badgeYAch"><div class="bv" id="badgeYAchV"></div><div class="bl">% Đạt</div></div>
+    <div class="badge" id="badgeYVly"><div class="bv" id="badgeYVlyV"></div><div class="bl">vs Năm trước</div></div>
+  </div>
+</div>
+
+<!-- Gap Card -->
+<div class="gap-card">
+  <h4>⇅ Chênh Lệch Sell-In vs Sell-Out</h4>
+  <div class="gkv"><div class="gl">Sell-In tháng</div><div class="gv" id="valSI"></div></div>
+  <div class="gkv"><div class="gl">Sell-Out tháng</div><div class="gv" id="valSO"></div></div>
+  <div class="gdiff">
+    <div><div class="dl">Chênh lệch SI−SO</div><div class="dv" id="valGapM"></div></div>
+    <div style="text-align:right"><div class="dl">Chênh lệch Lũy kế</div><div class="dv" id="valGapY"></div></div>
+  </div>
+</div>
+
+<!-- Fill Rate Card -->
+<div class="fill-card">
+  <h4>✅ Fill Rate &amp; Hàng trả về</h4>
+  <div class="fkv"><div class="fl2">Tổng nhu cầu TT</div><div class="fv" id="valFrDem"></div></div>
+  <div class="fkv"><div class="fl2">Hàng đáp ứng</div><div class="fv" id="valFrFil"></div></div>
+  <div class="fkv"><div class="fl2">Bị reject</div><div class="fv neg" id="valFrRej"></div></div>
+  <div class="fbw"><div class="fb" id="frBar"></div></div>
+  <div class="fpct" id="frPct"></div>
+  <div class="rets">
+    <div class="ret"><div class="rl">SO Trả về</div><div class="rv" id="valFrRet"></div></div>
+    <div class="ret"><div class="rl">Thu hồi</div><div class="rv" id="valFrRcl"></div></div>
+    <div class="ret"><div class="rl">Sampling</div><div class="rv" id="valFrSmp"></div></div>
+  </div>
+</div>
+
+<!-- Donut Kênh -->
+<div class="donut-card">
+  <h4>% Đóng Góp theo Kênh</h4>
+  <div class="dw">
+    <canvas id="cDonCh" width="68" height="68" style="flex-shrink:0"></canvas>
+    <div class="dl-list">
+      <div class="dl-i"><div class="dl-dot" style="background:var(--act)"></div>
+        <div><div class="dl-lbl">Nội địa</div><div class="dl-val" id="chDomLbl"></div></div>
+      </div>
+      <div class="dl-i"><div class="dl-dot" style="background:var(--tgt)"></div>
+        <div><div class="dl-lbl">Xuất khẩu</div><div class="dl-val" id="chExpLbl"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Donut Sản phẩm -->
+<div class="donut-card">
+  <h4>% Đóng Góp theo Sản Phẩm</h4>
+  <div class="dw">
+    <canvas id="cDonPr" width="68" height="68" style="flex-shrink:0"></canvas>
+    <div class="dl-list">
+      <div class="dl-i"><div class="dl-dot" style="background:var(--act)"></div>
+        <div><div class="dl-lbl">KUN</div><div class="dl-val" id="prKunLbl"></div></div>
+      </div>
+      <div class="dl-i"><div class="dl-dot" style="background:var(--tgt)"></div>
+        <div><div class="dl-lbl">LOF</div><div class="dl-val" id="prLofLbl"></div></div>
+      </div>
+      <div class="dl-i"><div class="dl-dot" style="background:var(--ly)"></div>
+        <div><div class="dl-lbl">Khác</div><div class="dl-val" id="prOthLbl"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Parse URL params với fallback defaults ─────────────────────── */
+const P = new URLSearchParams(location.search);
+const n  = (k, def) => parseFloat(P.get(k) ?? def);
+const s  = (k, def) => P.get(k) ?? def;
+const fmt = v => {
+  const x = parseFloat(String(v).replace(/,/g,''));
+  return isNaN(x) ? v : x.toLocaleString('vi-VN');
+};
+const pctStr = (v, prefix=true) => {
+  const x = parseFloat(v);
+  if (isNaN(x)) return '—';
+  return (prefix ? (x>=0 ? '▲ +' : '▼ ') : '') + x.toFixed(1) + '%';
+};
+
+/* ── Default data (mockup values) ─────────────────────────────── */
+const D = {
+  month:  s('month',  'Nov 2025'),
+  mAct:   n('m_act',  464432),
+  mTgt:   n('m_tgt',  662248),
+  mLY:    n('m_ly',   510365),
+  mAch:   n('m_ach',  70.1),
+  mVly:   n('m_vly',  -8.9),
+  mStk:   s('m_stk',  '242,640'),
+  mDays:  s('m_days', '11.9'),
+
+  yAct:   n('y_act',  7037505),
+  yTgt:   n('y_tgt',  7459041),
+  yLY:    n('y_ly',   6771038),
+  yAch:   n('y_ach',  94.3),
+  yVly:   n('y_vly',  3.9),
+
+  si:     s('si',    '464,432'),
+  so:     s('so',    '440,180'),
+  gapM:   s('gap_m', '+24,252'),
+  gapY:   s('gap_y', '+185,430'),
+
+  frDem:  s('fr_dem', '520,000'),
+  frFil:  s('fr_fil', '474,400'),
+  frRej:  s('fr_rej', '45,600'),
+  frPct:  n('fr_pct', 91.2),
+  frRet:  s('fr_ret', '8,200'),
+  frRcl:  s('fr_rcl', '2,850'),
+  frSmp:  s('fr_smp', '1,400'),
+
+  chDom:  n('ch_dom', 409763),
+  chExp:  n('ch_exp', 54669),
+  prKun:  n('pr_kun', 420950),
+  prLof:  n('pr_lof', 42740),
+  prOth:  n('pr_oth', 1329),
+};
+
+/* ── Helpers ── */
+const $  = id => document.getElementById(id);
+const setBadge = (elId, valElId, pct, label) => {
+  const val = parseFloat(pct);
+  const el  = $(elId);
+  el.className = 'badge ' + (val >= 100 ? 'up' : 'dn');
+  $(valElId).textContent = (val >= 100 ? '▲ ' : '▼ ') + Math.abs(val).toFixed(1) + '%';
+};
+const setVlyBadge = (elId, valElId, pct) => {
+  const val = parseFloat(pct);
+  const el  = $(elId);
+  el.className = 'badge ' + (val > 0 ? 'up' : 'dn');
+  $(valElId).textContent = (val > 0 ? '▲ +' : '▼ ') + val.toFixed(1) + '%';
+};
+const setBar = (barId, val, max) => {
+  $(barId).style.width = Math.min(100, Math.round(val/max*100)) + '%';
+};
+const setDiffVal = (elId, str) => {
+  const el = $(elId);
+  const trimmed = String(str).trim();
+  el.className = 'dv ' + (trimmed.startsWith('-') ? 'neg' : 'pos');
+  el.textContent = trimmed;
+};
+
+/* ── Render KPI Tháng ── */
+$('kpiMonthTitle').textContent = '📅 Tháng — ' + D.month;
+const mMax = Math.max(D.mAct, D.mTgt, D.mLY);
+setBar('barMAct', D.mAct, mMax);
+setBar('barMTgt', D.mTgt, mMax);
+setBar('barMLY',  D.mLY,  mMax);
+$('valMAct').textContent = fmt(D.mAct);
+$('valMTgt').textContent = fmt(D.mTgt);
+$('valMLY').textContent  = fmt(D.mLY);
+setBadge('badgeMAch', 'badgeMAchV', D.mAch);
+setVlyBadge('badgeMVly', 'badgeMVlyV', D.mVly);
+$('valStk').textContent  = fmt(D.mStk);
+$('valDays').textContent = D.mDays;
+
+/* ── Render KPI Lũy kế ── */
+const yMax = Math.max(D.yAct, D.yTgt, D.yLY);
+setBar('barYAct', D.yAct, yMax);
+setBar('barYTgt', D.yTgt, yMax);
+setBar('barYLY',  D.yLY,  yMax);
+$('valYAct').textContent = fmt(D.yAct);
+$('valYTgt').textContent = fmt(D.yTgt);
+$('valYLY').textContent  = fmt(D.yLY);
+setBadge('badgeYAch', 'badgeYAchV', D.yAch);
+setVlyBadge('badgeYVly', 'badgeYVlyV', D.yVly);
+
+/* ── Render Gap Card ── */
+$('valSI').textContent = fmt(D.si);
+$('valSO').textContent = fmt(D.so);
+setDiffVal('valGapM', D.gapM);
+setDiffVal('valGapY', D.gapY);
+
+/* ── Render Fill Rate Card ── */
+$('valFrDem').textContent = fmt(D.frDem);
+$('valFrFil').textContent = fmt(D.frFil);
+$('valFrRej').textContent = fmt(D.frRej);
+$('frBar').style.width    = Math.min(100, D.frPct) + '%';
+$('frPct').textContent    = 'Fill Rate: ' + D.frPct.toFixed(1) + '%';
+$('valFrRet').textContent = fmt(D.frRet);
+$('valFrRcl').textContent = fmt(D.frRcl);
+$('valFrSmp').textContent = fmt(D.frSmp);
+
+/* ── Render Donut Labels ── */
+const chTotal = D.chDom + D.chExp;
+const prTotal = D.prKun + D.prLof + D.prOth;
+$('chDomLbl').textContent = fmt(D.chDom) + ' (' + (D.chDom/chTotal*100).toFixed(1) + '%)';
+$('chExpLbl').textContent = fmt(D.chExp) + ' (' + (D.chExp/chTotal*100).toFixed(1) + '%)';
+$('prKunLbl').textContent = fmt(D.prKun) + ' (' + (D.prKun/prTotal*100).toFixed(1) + '%)';
+$('prLofLbl').textContent = fmt(D.prLof) + ' (' + (D.prLof/prTotal*100).toFixed(1) + '%)';
+$('prOthLbl').textContent = fmt(D.prOth) + ' (' + (D.prOth/prTotal*100).toFixed(1) + '%)';
+
+/* ── Donut Charts ── */
+const TIP = {backgroundColor:'#012F63',titleColor:'#fff',bodyColor:'#c6d6e0',cornerRadius:4,padding:5};
+const ACT='#0F59BA', TGT='#99BFE9', LY='#9C9CA4';
+
+new Chart($('cDonCh'), {
+  type:'doughnut',
+  data:{labels:['Nội địa','Xuất khẩu'],datasets:[{data:[D.chDom,D.chExp],backgroundColor:[ACT,TGT],borderWidth:0}]},
+  options:{responsive:false,cutout:'65%',plugins:{legend:{display:false},tooltip:TIP}}
+});
+
+new Chart($('cDonPr'), {
+  type:'doughnut',
+  data:{labels:['KUN','LOF','Khác'],datasets:[{data:[D.prKun,D.prLof,D.prOth],backgroundColor:[ACT,TGT,LY],borderWidth:0}]},
+  options:{responsive:false,cutout:'65%',plugins:{legend:{display:false},tooltip:TIP}}
+});
+</script>
+</body>
+</html>
